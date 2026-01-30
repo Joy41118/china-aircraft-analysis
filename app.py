@@ -1673,13 +1673,20 @@ def main():
                 col1, col2 = st.columns([3, 1])
 
                 with col1:
+                    # 确保 selected_airlines 存在
+                    if 'selected_airlines' not in st.session_state:
+                        st.session_state.selected_airlines = []
+
                     # 使用session_state管理选择
                     selected_airlines = st.multiselect(
                         "选择航司 (可多选)",
                         options=airlines,
-                        default=st.session_state.get('selected_airlines', []),  # 使用get避免KeyError
+                        default=st.session_state.selected_airlines,
                         key="airline_selector"
                     )
+
+                    # 更新 session_state 以反映当前选择
+                    st.session_state.selected_airlines = selected_airlines
 
                 with col2:
                     st.write("")
@@ -1689,54 +1696,21 @@ def main():
                     with col_select:
                         if st.button("全选航司", key="select_all_btn"):
                             st.session_state.selected_airlines = airlines
-                            # 使用rerun()重新运行脚本
-                            if hasattr(st, 'rerun'):
-                                st.rerun()
-                            elif hasattr(st, 'experimental_rerun'):
-                                st.experimental_rerun()
-                            else:
-                                # 旧版本Streamlit，使用JavaScript刷新
-                                st.components.v1.html(
-                                    """
-                                    <script>
-                                    setTimeout(function() {
-                                        window.location.reload();
-                                    }, 100);
-                                    </script>
-                                    """,
-                                    height=0
-                                )
+                            st.rerun()
 
                     with col_clear:
                         if st.button("清空选择", key="clear_all_btn"):
                             st.session_state.selected_airlines = []
-                            # 使用rerun()重新运行脚本
-                            if hasattr(st, 'rerun'):
-                                st.rerun()
-                            elif hasattr(st, 'experimental_rerun'):
-                                st.experimental_rerun()
-                            else:
-                                # 旧版本Streamlit，使用JavaScript刷新
-                                st.components.v1.html(
-                                    """
-                                    <script>
-                                    setTimeout(function() {
-                                        window.location.reload();
-                                    }, 100);
-                                    </script>
-                                    """,
-                                    height=0
-                                )
+                            st.rerun()
 
-                # 更新session_state，确保multiselect的默认值正确
-                st.session_state.selected_airlines = selected_airlines
-
-                if selected_airlines:
-                    st.success(f"✅ 已选择 {len(selected_airlines)} 个航司")
+                if st.session_state.selected_airlines:
+                    st.success(f"✅ 已选择 {len(st.session_state.selected_airlines)} 个航司")
 
                     # 创建分析功能区
                     st.markdown("---")
                     st.subheader("分析功能")
+
+
 
                     # 三个主要功能
                     col1, col2, col3 = st.columns(3)
