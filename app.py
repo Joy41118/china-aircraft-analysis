@@ -1666,18 +1666,25 @@ def main():
         with tab1:
             st.header("航司机龄分布分析")
 
+            # 初始化 selected_airlines
+            if 'selected_airlines' not in st.session_state:
+                st.session_state.selected_airlines = []
+
             # 航司选择
             if 'Airline_Normalized' in analyzer.filtered_df.columns:
                 airlines = sorted(analyzer.filtered_df['Airline_Normalized'].unique().tolist())
 
+                # 回调函数定义
+                def select_all_callback():
+                    st.session_state.selected_airlines = airlines.copy()
+
+                def clear_all_callback():
+                    st.session_state.selected_airlines = []
+
                 col1, col2 = st.columns([3, 1])
 
                 with col1:
-                    # 确保 selected_airlines 存在
-                    if 'selected_airlines' not in st.session_state:
-                        st.session_state.selected_airlines = []
-
-                    # 使用session_state管理选择
+                    # 航司多选框
                     selected_airlines = st.multiselect(
                         "选择航司 (可多选)",
                         options=airlines,
@@ -1685,8 +1692,9 @@ def main():
                         key="airline_selector"
                     )
 
-                    # 更新 session_state 以反映当前选择
-                    st.session_state.selected_airlines = selected_airlines
+                    # 更新 session state
+                    if selected_airlines != st.session_state.selected_airlines:
+                        st.session_state.selected_airlines = selected_airlines
 
                 with col2:
                     st.write("")
@@ -1694,28 +1702,30 @@ def main():
                     col_select, col_clear = st.columns(2)
 
                     with col_select:
-                        if st.button("全选航司", key="select_all_btn"):
-                            st.session_state.selected_airlines = airlines
-                            st.rerun()
+                        if st.button("全选航司",
+                                     key="select_all_btn",
+                                     on_click=select_all_callback,
+                                     use_container_width=True):
+                            pass  # 回调函数已经处理
 
                     with col_clear:
-                        if st.button("清空选择", key="clear_all_btn"):
-                            st.session_state.selected_airlines = []
-                            st.rerun()
+                        if st.button("清空选择",
+                                     key="clear_all_btn",
+                                     on_click=clear_all_callback,
+                                     use_container_width=True):
+                            pass  # 回调函数已经处理
 
+                # 显示选择状态
                 if st.session_state.selected_airlines:
                     st.success(f"✅ 已选择 {len(st.session_state.selected_airlines)} 个航司")
 
-                    # 创建分析功能区
+                    # 三个主要功能按钮
                     st.markdown("---")
                     st.subheader("分析功能")
 
+                    col_btn1, col_btn2, col_btn3 = st.columns(3)
 
-
-                    # 三个主要功能
-                    col1, col2, col3 = st.columns(3)
-
-                    with col1:
+                    with col_btn1:
                         if st.button("📋 生成航司x机型表", type="primary", use_container_width=True,
                                      key="cross_table_btn"):
                             with st.spinner("正在生成交叉表..."):
@@ -1725,33 +1735,32 @@ def main():
                                     st.dataframe(cross_table.style.background_gradient(cmap='Blues'),
                                                  use_container_width=True)
 
-                    with col2:
+                    with col_btn2:
                         if st.button("📈 生成机龄分布图", type="primary", use_container_width=True,
                                      key="age_charts_btn"):
-                            if selected_airlines:
+                            if st.session_state.selected_airlines:
                                 st.markdown("### 机龄分布图表")
-                                # 分列显示图表，每行最多3个
-                                for i in range(0, len(selected_airlines), 3):
+                                for i in range(0, len(st.session_state.selected_airlines), 3):
                                     cols = st.columns(3)
                                     for j in range(3):
-                                        if i + j < len(selected_airlines):
-                                            airline = selected_airlines[i + j]
+                                        if i + j < len(st.session_state.selected_airlines):
+                                            airline = st.session_state.selected_airlines[i + j]
                                             with cols[j]:
                                                 st.markdown(f"**{airline}**")
                                                 fig = analyzer.generate_airline_age_chart(airline)
                                                 if fig is not None:
                                                     st.pyplot(fig)
 
-                    with col3:
+                    with col_btn3:
                         if st.button("💾 导出到Excel", type="primary", use_container_width=True,
                                      key="export_airline_btn"):
-                            excel_data = analyzer.export_airline_analysis(selected_airlines)
+                            excel_data = analyzer.export_airline_analysis(st.session_state.selected_airlines)
 
-                    # 为每个选中的航司显示机型x机龄表
+                    # 显示各航司机型x机龄表
                     st.markdown("---")
                     st.subheader("各航司机型x机龄分布")
 
-                    for airline in selected_airlines:
+                    for airline in st.session_state.selected_airlines:
                         with st.expander(f"📊 {airline} - 机型x机龄分布", expanded=False):
                             age_table = analyzer.generate_airline_age_distribution(airline)
                             if age_table is not None:
@@ -1759,6 +1768,14 @@ def main():
                                              use_container_width=True)
                 else:
                     st.warning("⚠️ 请至少选择一个航司进行分析")
+
+                    # 显示可选航司数量
+                    st.info(f"📋 当前数据中有 {len(airlines)} 个航司可供选择")
+
+                    # 快速选择提示
+                    if st.button("点此快速选择前5个航司", key="quick_select_btn"):
+                        st.session_state.selected_airlines = airlines[:5]
+                        st.rerun()
             else:
                 st.warning("⚠️ 数据中没有找到航司信息")
 
