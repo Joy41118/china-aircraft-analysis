@@ -1677,7 +1677,7 @@ def main():
                     selected_airlines = st.multiselect(
                         "选择航司 (可多选)",
                         options=airlines,
-                        default=st.session_state.selected_airlines,
+                        default=st.session_state.get('selected_airlines', []),  # 使用get避免KeyError
                         key="airline_selector"
                     )
 
@@ -1689,12 +1689,47 @@ def main():
                     with col_select:
                         if st.button("全选航司", key="select_all_btn"):
                             st.session_state.selected_airlines = airlines
-                            st.rerun()
+                            # 使用rerun()重新运行脚本
+                            if hasattr(st, 'rerun'):
+                                st.rerun()
+                            elif hasattr(st, 'experimental_rerun'):
+                                st.experimental_rerun()
+                            else:
+                                # 旧版本Streamlit，使用JavaScript刷新
+                                st.components.v1.html(
+                                    """
+                                    <script>
+                                    setTimeout(function() {
+                                        window.location.reload();
+                                    }, 100);
+                                    </script>
+                                    """,
+                                    height=0
+                                )
 
                     with col_clear:
                         if st.button("清空选择", key="clear_all_btn"):
                             st.session_state.selected_airlines = []
-                            st.rerun()
+                            # 使用rerun()重新运行脚本
+                            if hasattr(st, 'rerun'):
+                                st.rerun()
+                            elif hasattr(st, 'experimental_rerun'):
+                                st.experimental_rerun()
+                            else:
+                                # 旧版本Streamlit，使用JavaScript刷新
+                                st.components.v1.html(
+                                    """
+                                    <script>
+                                    setTimeout(function() {
+                                        window.location.reload();
+                                    }, 100);
+                                    </script>
+                                    """,
+                                    height=0
+                                )
+
+                # 更新session_state，确保multiselect的默认值正确
+                st.session_state.selected_airlines = selected_airlines
 
                 if selected_airlines:
                     st.success(f"✅ 已选择 {len(selected_airlines)} 个航司")
